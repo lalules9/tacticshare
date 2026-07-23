@@ -92,8 +92,7 @@ st.markdown("""
     box-shadow: 0 0 0 1px #ff4500 !important;
   }
   /* Ensure multi-line text areas are white like the single-line inputs */
-  .stTextArea textarea, .stTextInput input,
-  [data-baseweb="textarea"], [data-baseweb="base-input"], [data-baseweb="input"] {
+  .stTextArea textarea, [data-baseweb="textarea"] {
     background-color: #ffffff !important;
   }
   .stTextInput label, .stTextArea label,
@@ -106,7 +105,8 @@ st.markdown("""
     font-family: 'Cabinet Grotesk', sans-serif !important;
   }
   .stSelectbox label, .stSelectbox p { color: #1a1a1a !important; font-weight: 500 !important; }
-  .stButton > button {
+  .stButton > button,
+  .stFormSubmitButton > button {
     background-color: #ff4500 !important;
     color: #ffffff !important;
     font-family: 'Cabinet Grotesk', sans-serif !important;
@@ -118,7 +118,8 @@ st.markdown("""
     letter-spacing: 0.5px !important;
     transition: opacity 0.2s !important;
   }
-  .stButton > button:hover { opacity: 0.85 !important; }
+  .stButton > button:hover,
+  .stFormSubmitButton > button:hover { opacity: 0.85 !important; }
 
   /* Match cards */
   .match-card {
