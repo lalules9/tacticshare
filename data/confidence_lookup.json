@@ -1,0 +1,402 @@
+{
+  "1": {
+    "campaign_name": "US Cage-Free Corporate",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "Medium",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "Medium",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "High"
+  },
+  "2": {
+    "campaign_name": "Better Chicken Commitment EU",
+    "variables": {
+      "target_type": "Not found",
+      "decision_making_concentration": "Not found",
+      "strength_of_opposition": "Not found",
+      "type_of_opposition": "Not found",
+      "visibility_of_harm": "Not found",
+      "behaviour_change_required": "Not found",
+      "primary_mechanism": "Not found",
+      "coalition": "Not found",
+      "economic_disruption": "Not found",
+      "speed_of_change": "Not found",
+      "scale_of_change": "Not found",
+      "public_sentiment": "Not found",
+      "legal_regulatory": "Not found",
+      "narrative_dominance": "Not found"
+    },
+    "overall_confidence": "High"
+  },
+  "3": {
+    "campaign_name": "SeaWorld / Anti-Captivity Post-Blackfish",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "Medium",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "High"
+  },
+  "4": {
+    "campaign_name": "Mexico Constitutional animal protection reform",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "Medium",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "Medium",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "Medium",
+      "legal_regulatory": "High",
+      "narrative_dominance": "Medium"
+    },
+    "overall_confidence": "High"
+  },
+  "5": {
+    "campaign_name": "Sinergia Animal Global South Cage-Free & Pig Welfare Campaign",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "Medium",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "Medium",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "Medium"
+    },
+    "overall_confidence": "Medium"
+  },
+  "6": {
+    "campaign_name": "UK live export ban – animal welfare (livestock exports) Act 2017-2024",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "High"
+  },
+  "7": {
+    "campaign_name": "New Zealand live export ban",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "Medium",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High",
+      "public_sentiment": "Not found"
+    },
+    "overall_confidence": "High"
+  },
+  "8": {
+    "campaign_name": "UK foie gras import ban campaign",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "Medium",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "Medium",
+      "legal_regulatory": "High",
+      "narrative_dominance": "Medium"
+    },
+    "overall_confidence": "Medium"
+  },
+  "9": {
+    "campaign_name": "Australian marriage equality postal survey",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "Medium",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "High"
+  },
+  "10": {
+    "campaign_name": "Australian plain packaging tobacco",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "Medium",
+      "economic_disruption": "Medium",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "Medium"
+  },
+  "11": {
+    "campaign_name": "#MeToo workplace harassment norm shift",
+    "variables": {
+      "target_type": "Medium",
+      "decision_making_concentration": "Medium",
+      "strength_of_opposition": "Low",
+      "type_of_opposition": "Medium",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "Medium",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "Low",
+      "speed_of_change": "Medium",
+      "scale_of_change": "Medium",
+      "public_sentiment": "High",
+      "legal_regulatory": "Medium",
+      "narrative_dominance": "Medium"
+    },
+    "overall_confidence": "Medium"
+  },
+  "12": {
+    "campaign_name": "Leaded petrol global phase-out",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "Medium",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "Medium",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "legal_regulatory": "Medium",
+      "narrative_dominance": "Medium",
+      "public_sentiment": "Not found"
+    },
+    "overall_confidence": "High"
+  },
+  "13": {
+    "campaign_name": "Rana Plaza/Bangladesh Accord origin",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "Medium",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "Medium",
+      "legal_regulatory": "High",
+      "narrative_dominance": "Medium"
+    },
+    "overall_confidence": "High"
+  },
+  "14": {
+    "campaign_name": "Black Lives Matter/Policing Reform",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "Medium"
+    },
+    "overall_confidence": "Medium"
+  },
+  "15": {
+    "campaign_name": "UK Single-use plastics ban",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "Medium",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "High"
+  },
+  "16": {
+    "campaign_name": "Every Australian Counts/NDIS Campaign",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "Medium",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "Medium",
+      "legal_regulatory": "High",
+      "narrative_dominance": "Medium"
+    },
+    "overall_confidence": "High"
+  },
+  "17": {
+    "campaign_name": "Australian mandatory detention campaign",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "Medium",
+      "economic_disruption": "High",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "High",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "High"
+  },
+  "18": {
+    "campaign_name": "#EndSARS Nigeria police brutality campaign",
+    "variables": {
+      "target_type": "Not found",
+      "decision_making_concentration": "Not found",
+      "strength_of_opposition": "Not found",
+      "type_of_opposition": "Not found",
+      "visibility_of_harm": "Not found",
+      "behaviour_change_required": "Not found",
+      "primary_mechanism": "Not found",
+      "coalition": "Not found",
+      "economic_disruption": "Not found",
+      "speed_of_change": "Not found",
+      "scale_of_change": "Not found",
+      "public_sentiment": "Not found",
+      "legal_regulatory": "Not found",
+      "narrative_dominance": "Not found"
+    },
+    "overall_confidence": "High"
+  },
+  "19": {
+    "campaign_name": "Brazil MST narrative reframe around organic foods",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "High",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "Medium",
+      "primary_mechanism": "High",
+      "coalition": "High",
+      "economic_disruption": "Medium",
+      "public_sentiment": "Medium",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High",
+      "speed_of_change": "Not found",
+      "scale_of_change": "Not found"
+    },
+    "overall_confidence": "High"
+  },
+  "20": {
+    "campaign_name": "Greenpeace Detox My Fashion campaign",
+    "variables": {
+      "target_type": "High",
+      "decision_making_concentration": "High",
+      "strength_of_opposition": "Medium",
+      "type_of_opposition": "High",
+      "visibility_of_harm": "High",
+      "behaviour_change_required": "High",
+      "primary_mechanism": "High",
+      "coalition": "Medium",
+      "economic_disruption": "Medium",
+      "speed_of_change": "High",
+      "scale_of_change": "High",
+      "public_sentiment": "Medium",
+      "legal_regulatory": "High",
+      "narrative_dominance": "High"
+    },
+    "overall_confidence": "High"
+  }
+}
