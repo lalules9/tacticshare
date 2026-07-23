@@ -91,6 +91,11 @@ st.markdown("""
     border-color: #ff4500 !important;
     box-shadow: 0 0 0 1px #ff4500 !important;
   }
+  /* Ensure multi-line text areas are white like the single-line inputs */
+  .stTextArea textarea, .stTextInput input,
+  [data-baseweb="textarea"], [data-baseweb="base-input"], [data-baseweb="input"] {
+    background-color: #ffffff !important;
+  }
   .stTextInput label, .stTextArea label,
   .stTextInput p, .stTextArea p,
   [data-testid="stTextInput"] p,
@@ -847,10 +852,13 @@ def _data_version():
     return h.hexdigest()[:16]
 
 
-def cache_key(intake, categories):
+def cache_key(raw_inputs, categories):
+    """Key the cache on the user's RAW typed input plus the confirmed categories, not on the
+    LLM-generated profile. The profile varies slightly run to run, so keying on it meant the
+    same typed campaign produced a fresh (and slightly different) score every time. Keying on
+    the raw text makes identical input return an identical, reproducible result."""
     payload = json.dumps({
-        'profile': intake.get('profile', {}),
-        'summary': intake.get('campaign_summary', ''),
+        'raw_inputs': raw_inputs or {},
         'categories': categories,
         'model': MODEL,
         'prompt_version': PROMPT_VERSION,
@@ -963,58 +971,63 @@ def main():
     if st.session_state.stage == 'input':
         st.markdown('<div class="section-label">Your campaign</div>', unsafe_allow_html=True)
 
-        topic_and_goal = st.text_area(
-            "What is your campaign about, and what specific change are you trying to achieve?",
-            placeholder="e.g. We are campaigning to end the live export of sheep from Australia. "
-                        "We want the federal government to pass legislation banning live sheep exports by 2026.",
-            height=110, key="topic_and_goal")
+        with st.form("intake_form"):
+            topic_and_goal = st.text_area(
+                "What is your campaign about, and what specific change are you trying to achieve?",
+                placeholder="e.g. We are campaigning to end the live export of sheep from Australia. "
+                            "We want the federal government to pass legislation banning live sheep exports by 2026.",
+                height=110, key="topic_and_goal")
 
-        jurisdiction = st.text_input("Where are you campaigning?",
-                                     placeholder="e.g. Australia (federal)", key="jurisdiction")
+            jurisdiction = st.text_input("Where are you campaigning?",
+                                         placeholder="e.g. Australia (federal)", key="jurisdiction")
 
-        decision_maker = st.text_input(
-            "Who has the power to make that change happen?",
-            placeholder="e.g. The federal Agriculture Minister and Senate — legislation requires a majority vote.",
-            key="decision_maker")
+            decision_maker = st.text_input(
+                "Who has the power to make that change happen?",
+                placeholder="e.g. The federal Agriculture Minister and Senate — legislation requires a majority vote.",
+                key="decision_maker")
 
-        opposition = st.text_area(
-            "Who or what is likely to oppose you, and how powerful are they?",
-            placeholder="e.g. The live export industry and rural lobby — well-funded, strong relationships "
-                        "with the National Party, actively run counter-campaigns.",
-            height=90, key="opposition")
+            opposition = st.text_area(
+                "Who or what is likely to oppose you, and how powerful are they?",
+                placeholder="e.g. The live export industry and rural lobby — well-funded, strong relationships "
+                            "with the National Party, actively run counter-campaigns.",
+                height=90, key="opposition")
 
-        campaign_backing = st.text_area(
-            "Does your campaign have any of these yet? (optional)",
-            placeholder="Briefly state any of the following:\n"
-                        "• Any other groups or organisations working with you\n"
-                        "• Money or funding already secured\n"
-                        "• Scientists or experts supportive of this campaign\n"
-                        "• Politicians, officials, or government bodies supportive of this campaign\n\n"
-                        "Don't have these yet? That's fine — write 'not yet' or leave it blank.",
-            height=130, key="campaign_backing")
+            campaign_backing = st.text_area(
+                "Does your campaign have any of these yet? (optional)",
+                placeholder="Briefly state any of the following:\n"
+                            "• Any other groups or organisations working with you\n"
+                            "• Money or funding already secured\n"
+                            "• Scientists or experts supportive of this campaign\n"
+                            "• Politicians, officials, or government bodies supportive of this campaign\n\n"
+                            "Don't have these yet? That's fine — write 'not yet' or leave it blank.",
+                height=130, key="campaign_backing")
 
-        public_awareness = st.selectbox(
-            "How aware is the general public of the problem you're addressing?",
-            options=list(PUBLIC_SENTIMENT_MAP.keys()), key="public_awareness")
+            public_awareness = st.selectbox(
+                "How aware is the general public of the problem you're addressing?",
+                options=list(PUBLIC_SENTIMENT_MAP.keys()), key="public_awareness")
 
-        campaign_stage = st.selectbox(
-            "What stage is your campaign at?",
-            options=[
-                "Just starting out — early research and planning",
-                "Some groundwork done — some allies, some public presence",
-                "Already active — running, with momentum building"
-            ], key="campaign_stage")
+            campaign_stage = st.selectbox(
+                "What stage is your campaign at?",
+                options=[
+                    "Just starting out — early research and planning",
+                    "Some groundwork done — some allies, some public presence",
+                    "Already active — running, with momentum building"
+                ], key="campaign_stage")
 
-        additional_context = st.text_area(
-            "Anything else we should know? (optional)",
-            placeholder="e.g. We have support from two major welfare organisations. "
-                        "A Senate inquiry is underway. Public awareness spiked after a recent media exposé.",
-            height=80, key="additional_context")
+            additional_context = st.text_area(
+                "Anything else we should know? (optional)",
+                placeholder="e.g. We have support from two major welfare organisations. "
+                            "A Senate inquiry is underway. Public awareness spiked after a recent media exposé.",
+                height=80, key="additional_context")
 
-        st.markdown("")
-        if st.button("Find Precedents ⚡"):
+            st.markdown("")
+            submitted = st.form_submit_button("Find Precedents ⚡")
+
+        if submitted:
             if not topic_and_goal or not jurisdiction or not decision_maker:
-                st.warning("Please fill in at least the first three fields.")
+                st.warning("Please fill in the first three questions before continuing: "
+                           "what your campaign is about, where you are campaigning, and who has "
+                           "the power to make the change. The rest are optional.")
             else:
                 with st.spinner("Analysing your campaign structure..."):
                     intake_prompt = INTAKE_PROMPT.format(
@@ -1150,7 +1163,7 @@ hope to get them.
                     cats = {'target': conf_target, 'mechanism': conf_mech,
                             'concentration': conf_conc, 'public_sentiment': conf_sent,
                             'opposition': conf_opp}
-                    ckey = cache_key(intake, cats)
+                    ckey = cache_key(st.session_state.get("raw_inputs", {}), cats)
                     all_scores_raw = cache_load(ckey)
                     if all_scores_raw is not None:
                         st.session_state['cache_status'] = f"HIT ({ckey[:8]}) — identical inputs, stored result reused"
