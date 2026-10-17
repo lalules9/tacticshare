@@ -780,7 +780,8 @@ def call_llm(prompt_text, max_tokens=8192, system=None, label=""):
         st.stop()
     try:
         client = anthropic.Anthropic(api_key=api_key)
-        kwargs = dict(model=MODEL, max_tokens=max_tokens, temperature=0,
+        kwargs = dict(model=MODEL, max_tokens=max_tokens,
+                      extra_body={"temperature": 0},  # SDK 1.x removed the temperature argument
                       messages=[{"role": "user", "content": prompt_text}])
         if system:
             kwargs["system"] = system
