@@ -60,8 +60,8 @@ Be analytical and precise.
 INTAKE_PROMPT = """
 You are TacticShare, a strategic intelligence tool that helps campaigners learn from past movements.
 
-A campaigner has answered 6 questions about their campaign. Your job is to translate their answers
-into a structured profile that maps to 15 standard structural dimensions used to compare campaigns.
+A campaigner has answered questions about their campaign. Your job is to translate their answers
+into a structured profile using the standard structural dimensions below, which are used to compare campaigns.
 This profile will be used internally for matching — the user will never see it.
 
 SOURCE RULE — ABSOLUTE: The campaigner's answers below are your ONLY permitted source.
@@ -376,13 +376,13 @@ Return valid JSON only. No preamble, no markdown, no explanation outside the JSO
         }},
         "institutional_environment": {{
           "variables": {{
-            "coalition_infrastructure": "diverges",
-            "regulatory_precedent": "equivalent",
-            "financial_backing": "diverges"
+            "coalition": "diverges",
+            "regulatory_legal_position": "equivalent",
+            "financial_resources": "diverges"
           }},
           "divergence_count": 2,
           "alignment": "Weak",
-          "reasoning": "The precedent leaned most on an established coalition, a regulatory precedent it could cite, and dedicated funding. The regulatory position is comparable for you, but the coalition infrastructure and dedicated funding are not mentioned in your profile and are treated as absent."
+          "reasoning": "The precedent leaned most on an established coalition, a favourable regulatory position, and dedicated funding. The regulatory position is comparable for you, but a coalition and dedicated funding are not mentioned in your profile and are treated as absent."
         }}
       }},
       "match_summary": "One sentence on strategic usefulness as analogue."
@@ -418,10 +418,13 @@ STRICT EVIDENCE RULES:
   in the provided data. Do not import any figure or claim from your training data.
 - If data is insufficient for a point, omit that point rather than fabricating.
 
-PINNED FIELDS RULE — IMPORTANT: The precedent's Concentration level is supplied as a pinned
-classification below. It takes precedence over any wording inside the narrative fields. If a
-narrative field describes concentration differently, the PINNED level is correct and is what you
-must use in your text. Never describe this precedent's concentration using a contradicting word.
+PINNED FIELDS RULE — IMPORTANT: Some values are supplied as pinned classifications below: the
+concentration level and opposition strength (Low / Moderate / High) for both the user's campaign
+and the precedent, and the user's public sentiment category. These are the same values used to
+score the match. They take precedence over any wording inside the narrative fields or the user's
+structural profile. If a narrative describes concentration, opposition strength or public sentiment
+differently, the PINNED value is correct and is what you must use in your text. Never describe
+either campaign using a word that contradicts its pinned value.
 
 USER'S CAMPAIGN:
 {campaign_summary}
@@ -433,6 +436,8 @@ USER'S STRUCTURAL PROFILE:
 
 USER'S PINNED VALUES (authoritative):
   Concentration level [PINNED]: {user_concentration}
+  Opposition strength [PINNED]: {user_opposition}
+  Public sentiment category [PINNED]: {user_public_sentiment}
 
 MATCH SUMMARY (use this verbatim as the intro for Section 1):
 {match_summary}
@@ -442,6 +447,7 @@ PRECEDENT — LIST A DATA (Variables 1–14):
 
 PRECEDENT PINNED VALUES (authoritative):
   Concentration level [PINNED]: {precedent_concentration}
+  Opposition strength [PINNED]: {precedent_opposition}
 
 NOTABLE TACTICS — Variable 15 (copy names verbatim, do not rename or add any):
 {notable_tactics}

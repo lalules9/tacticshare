@@ -13,3 +13,6 @@ Thumbs.db
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Saved ranking results (test data; not part of the tool, and the repo is public)
+cache/

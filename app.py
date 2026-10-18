@@ -14,14 +14,15 @@ from prompt import INTAKE_PROMPT, RANKING_PROMPT, DEEP_DIVE_PROMPT, SYSTEM_PROMP
 # ─── Configuration ────────────────────────────────────────────────────────────
 load_dotenv()
 
-MODEL = "claude-haiku-4-5"          # Swap to "claude-sonnet-4-6" for production
+MODEL = "claude-haiku-4-5"          # Chosen 17 Oct 2026: most consistent of Haiku 4.5, Sonnet 4.6 and
+                                    # Sonnet 5.5 over 5 repeat runs. Re-test before changing model.
 DATA_PATH = "data/campaign_database_v1.csv"
 LIST_B_CONF_PATH = "data/list_b_extraction.csv"       # has oracle_campaign join key
 CONCENTRATION_PATH = "data/concentration_levels.csv"  # pinned 3-level concentration sidecar
 ENABLERS_PATH = "data/campaign_enablers.csv"          # pinned IE enablers (count varies per campaign)
 OPPOSITION_PATH = "data/opposition_levels.csv"        # pinned 3-level opposition strength sidecar
-CACHE_DIR = "cache"                                   # reproducibility: cached ranking results
-PROMPT_VERSION = "2026-07-18-v3"                      # bump when prompts change to invalidate cache
+CACHE_DIR = "cache"                                   # saved ranking results (see "Result cache" below)
+PROMPT_VERSION = "2026-10-18-v4"                      # bump when prompts change to invalidate cache
 
 # Ranking is sent in batches to keep each call well under the output token cap.
 RANKING_BATCH_SIZE = 5
@@ -251,6 +252,13 @@ def _norm(s):
     return str(s or "").strip().lower()
 
 
+def note_check(msg):
+    """Record a message from an automatic check. Shown on the page that follows, because a
+    st.warning raised just before st.rerun() is cleared before anyone can read it."""
+    print(f"[check] {msg}")
+    st.session_state.setdefault('check_notes', []).append(msg)
+
+
 def _idx(options, value, default=0):
     v = _norm(value)
     for i, o in enumerate(options):
@@ -369,27 +377,25 @@ def load_enablers():
 
 
 # ─── Campaign name resolution (single source of truth) ────────────────────────
-_STOPWORDS = {'the', 'a', 'an', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'from'}
+def _name_key(name):
+    """Compare names ignoring case, spacing and dash style only. No word-overlap guessing:
+    'UK live export ban' and 'New Zealand live export ban' share three words, and a fuzzy
+    match could attach one campaign's scores and pinned data to the other."""
+    s = re.sub(r'[‐-―−]', '-', str(name or '')).lower()
+    return " ".join(s.split())
 
 
 def resolve_oracle_name(df, campaign_name):
-    """Resolve an LLM-returned campaign name to the exact oracle name, or None."""
+    """Resolve an LLM-returned campaign name to the exact oracle name, or None. A name that
+    doesn't match is treated as unscored, which triggers the ranking retry."""
     if campaign_name is None:
         return None
     exact = df[df['Campaign'] == campaign_name]
     if not exact.empty:
         return exact.iloc[0]['Campaign']
-    ci = df[df['Campaign'].str.lower() == str(campaign_name).lower()]
-    if not ci.empty:
-        return ci.iloc[0]['Campaign']
-    query_words = set(re.findall(r'\w+', str(campaign_name).lower())) - _STOPWORDS
-    best_name, best_score = None, 0
-    for _, name in df['Campaign'].items():
-        name_words = set(re.findall(r'\w+', str(name).lower())) - _STOPWORDS
-        score = len(query_words & name_words)
-        if score > best_score:
-            best_score, best_name = score, name
-    return best_name if best_score >= 2 else None
+    key = _name_key(campaign_name)
+    hit = df[df['Campaign'].map(_name_key) == key]
+    return hit.iloc[0]['Campaign'] if not hit.empty else None
 
 
 def _get_campaign_row(df, campaign_name):
@@ -545,11 +551,17 @@ def opposition_verdict(user_level, precedent_level):
     return 'equivalent' if a == b else 'diverges'
 
 
+def _diverges(verdict):
+    """Only an explicit 'equivalent' counts as a match. Anything else (a typo, 'unclear',
+    'partially') counts as diverging, in line with the prompt's 'when in doubt, diverges'."""
+    return _norm(verdict) != 'equivalent'
+
+
 def _count_divergences(variables):
     n = 0
     for v in (variables or {}).values():
         verdict = v.get('verdict') if isinstance(v, dict) else v
-        if _norm(verdict) == 'diverges':
+        if _diverges(verdict):
             n += 1
     return n
 
@@ -646,9 +658,20 @@ def process_all_scores(all_scores_raw, df, conc_map, user_conc_level, gate_flag_
     Returns (scored, rankings, partials, below_threshold, mismatch_notes, provenance_issues)."""
     scored, below_threshold, mismatch_notes, provenance_issues = [], [], [], []
 
+    seen = set()
     for c in all_scores_raw:
-        dim_scores = c.get('dimension_scores', {}) or {}
         oracle_name = resolve_oracle_name(df, c.get('campaign', ''))
+        # A name that isn't in the database is never guessed: it is left out (and reported as
+        # unscored). A campaign scored twice keeps its first score.
+        if oracle_name is None:
+            note_check(f"The model returned a campaign name not in the database, so it was ignored: "
+                       f"'{c.get('campaign', '')}'")
+            continue
+        if oracle_name in seen:
+            continue
+        seen.add(oracle_name)
+        c = {**c, 'campaign': oracle_name}
+        dim_scores = c.get('dimension_scores', {}) or {}
 
         # 1) Deterministic concentration verdict (fix #3)
         ca = dim_scores.get('change_architecture', {})
@@ -803,10 +826,8 @@ def call_llm(prompt_text, max_tokens=8192, system=None, label=""):
                   f"out={entry['output_tokens']}/{max_tokens} stop={stop_reason}")
 
         if stop_reason == "max_tokens":
-            st.warning(
-                f"⚠ The model hit its output token limit on {label or 'this call'} and the response "
-                f"was cut off. Results may be incomplete — reduce RANKING_BATCH_SIZE or raise max_tokens."
-            )
+            note_check(f"The model hit its output limit on {label or 'a call'} and the reply was cut "
+                       f"off, so results may be incomplete (reduce RANKING_BATCH_SIZE or raise max_tokens).")
 
         for block in message.content:
             if getattr(block, "type", None) == "text":
@@ -840,9 +861,19 @@ def parse_json(text, label="response"):
 
 
 # ─── Result cache (reproducibility) ───────────────────────────────────────────
-# Identical inputs must return an identical result, or users cannot trust the tool.
-# The LLM is not bit-deterministic even at temperature 0, so we cache on an input hash.
-# The key includes the data files and prompt version, so updating either recomputes.
+# Identical inputs should return an identical result, or users cannot trust the tool.
+# The LLM is not bit-deterministic even at temperature 0, so the model's raw ranking
+# scores are saved under a hash of the inputs and reused on an exact repeat.
+# What this does and does not guarantee:
+#   - The key includes the typed inputs, confirmed categories, model, prompt version and
+#     data files, so changing any of them scores afresh.
+#   - The cache holds the model's RAW scores. The Python rules (pinned overrides, alignment,
+#     weights, tiers) are re-applied on every load, so a change to those rules changes the
+#     result even for a cached input.
+#   - On Streamlit Community Cloud, files written while the app runs are lost whenever it
+#     restarts or redeploys. Only cache files committed to the repo survive there, and the
+#     repo is public, so anything committed in cache/ is publicly readable.
+#   - Intake and deep dive calls are not cached; only ranking is.
 @st.cache_data
 def _data_version():
     h = hashlib.sha256()
@@ -887,6 +918,12 @@ def cache_save(key, scores):
         print(f"[cache] write failed: {e}")
 
 
+def unscored_campaigns(df, passing, all_scores_raw):
+    """Gate-passing campaigns with no score in the model's response."""
+    scored_names = {resolve_oracle_name(df, c.get('campaign', '')) for c in all_scores_raw}
+    return [n for n in passing if n not in scored_names]
+
+
 def run_ranking_in_batches(df, passing, conc_map, intake, user_conc, user_sentiment, enabler_map=None,
                            opp_map=None, user_opposition=None):
     """FIX #16 — score gate-passing campaigns in batches so no single call approaches
@@ -907,7 +944,7 @@ def run_ranking_in_batches(df, passing, conc_map, intake, user_conc, user_sentim
                         label=f"ranking batch {n}/{len(batches)}")
         parsed = parse_json(resp, label=f"precedent ranking (batch {n})")
         if parsed is None:
-            st.warning(f"⚠ Batch {n} failed to parse — its campaigns are missing from the results.")
+            note_check(f"Matching batch {n} could not be read, so its campaigns were sent again.")
             continue
         merged.extend(parsed.get('all_scores', []))
     return merged
@@ -939,7 +976,7 @@ def variable_chips_html(variables):
     chips = []
     for key, val in variables.items():
         verdict = val.get('verdict') if isinstance(val, dict) else val
-        diverges = _norm(verdict) == 'diverges'
+        diverges = _diverges(verdict)
         cls = 'var-div' if diverges else 'var-eq'
         mark = '✕' if diverges else '✓'
         chips.append(f'<span class="var-chip {cls}">{esc(_pretty_var(key))} {mark}</span>')
@@ -1038,20 +1075,40 @@ def main():
                         public_awareness=public_awareness, campaign_stage=campaign_stage,
                         campaign_backing=campaign_backing or "None listed — treat institutional supports as not yet established (early-stage campaign).",
                         additional_context=additional_context or "None provided.")
-                    intake_response = call_llm(intake_prompt, max_tokens=8192,
-                                               system=INTAKE_SYSTEM_PROMPT, label="intake")
-                    intake_result = parse_json(intake_response, label="intake analysis")
-                    if intake_result is None:
-                        return
+                    # Profile fields the user did answer, so the model must not mark them unclear.
+                    answered_fields = []
+                    if opposition:
+                        answered_fields += [('strength_of_opposition', "Strength of opposition", opposition),
+                                            ('type_of_opposition', "Type of opposition", opposition)]
+                    if decision_maker:
+                        answered_fields.append(('decision_making_concentration',
+                                                "Decision-making concentration", decision_maker))
 
-                    profile = intake_result.get('profile', {})
-                    unclear_warnings = []
-                    if opposition and "unclear" in profile.get('strength_of_opposition', '').lower():
-                        unclear_warnings.append("Strength of opposition (you provided this — the LLM missed it)")
-                    if opposition and "unclear" in profile.get('type_of_opposition', '').lower():
-                        unclear_warnings.append("Type of opposition (you provided this — the LLM missed it)")
-                    if decision_maker and "unclear" in profile.get('decision_making_concentration', '').lower():
-                        unclear_warnings.append("Decision-making concentration (you provided this — the LLM missed it)")
+                    # One automatic retry if the model marks an answered field as unclear. The call
+                    # runs at temperature 0, so an identical retry would usually repeat the miss: the
+                    # retry names the missed fields and points back to the user's own answer.
+                    retry_note = ""
+                    for attempt in (1, 2):
+                        intake_response = call_llm(intake_prompt + retry_note, max_tokens=8192,
+                                                   system=INTAKE_SYSTEM_PROMPT,
+                                                   label="intake" if attempt == 1 else "intake retry")
+                        intake_result = parse_json(intake_response, label="intake analysis")
+                        if intake_result is None:
+                            return
+                        profile = intake_result.get('profile', {})
+                        missed = [(key, label, answer) for key, label, answer in answered_fields
+                                  if "unclear" in str(profile.get(key, '')).lower()]
+                        if not missed:
+                            break
+                        retry_note = (
+                            "\n\nCORRECTION: a previous attempt marked these dimensions as \"Unclear from "
+                            "inputs\", but the campaigner did answer them. Assess each one from the "
+                            "campaigner's own words quoted here, and follow the source rule as before:\n"
+                            + "\n".join(f"- {label}: \"{answer}\"" for _, label, answer in missed))
+                        print(f"[intake] retrying, missed: {[label for _, label, _ in missed]}")
+
+                    unclear_warnings = [f"{label} (you provided this, but the analysis missed it)"
+                                        for _, label, _ in missed]
                     if unclear_warnings:
                         st.warning("⚠ The analysis missed some information you provided. "
                                    "Go back and re-run — this occasionally happens and should resolve:\n\n"
@@ -1162,6 +1219,7 @@ hope to get them.
                         return
 
                     st.session_state['usage_log'] = []
+                    st.session_state['check_notes'] = []
                     cats = {'target': conf_target, 'mechanism': conf_mech,
                             'concentration': conf_conc, 'public_sentiment': conf_sent,
                             'opposition': conf_opp}
@@ -1173,33 +1231,34 @@ hope to get them.
                         all_scores_raw = run_ranking_in_batches(
                             df, passing, conc_map, intake, conf_conc, conf_sent, enabler_map,
                             opp_map, conf_opp)
-                        if all_scores_raw:
+                        # One automatic retry for any campaign the model left out (or whose batch
+                        # failed to parse), sent on its own so the prompt differs from the first call.
+                        missing = unscored_campaigns(df, passing, all_scores_raw)
+                        if missing:
+                            print(f"[ranking] retrying unscored campaigns: {missing}")
+                            all_scores_raw += run_ranking_in_batches(
+                                df, missing, conc_map, intake, conf_conc, conf_sent, enabler_map,
+                                opp_map, conf_opp)
+                        # Store only complete results, so an incomplete run is never replayed.
+                        if all_scores_raw and not unscored_campaigns(df, passing, all_scores_raw):
                             cache_save(ckey, all_scores_raw)
-                        st.session_state['cache_status'] = f"MISS ({ckey[:8]}) — scored fresh and stored"
+                        st.session_state['cache_status'] = f"MISS ({ckey[:8]}) — scored fresh"
 
                     if not all_scores_raw:
                         st.error("Ranking returned no scored campaigns.")
                         return
 
-                    scored_names = {resolve_oracle_name(df, c.get('campaign', '')) for c in all_scores_raw}
-                    missing = [n for n in passing if n not in scored_names]
-                    if missing:
-                        st.warning("⚠ These gate-passing campaigns were not scored: " + ", ".join(missing))
+                    # Still missing after the retry: kept in session state and shown on the
+                    # results page (a warning here would be cleared by the rerun below).
+                    st.session_state.unscored = unscored_campaigns(df, passing, all_scores_raw)
 
                     (all_scores_processed, rankings, partials, below_threshold,
                      mismatch_notes, provenance_issues) = process_all_scores(
                         all_scores_raw, df, conc_map, conf_conc, flag_map, enabler_map,
                         opp_map, conf_opp)
 
-                    if provenance_issues:
-                        st.warning(
-                            f"⚠ **Institutional Environment:** {len(provenance_issues)} enabler "
-                            f"naming issue(s). Unpinned entries were dropped so they cannot affect "
-                            f"the score. See the debug expander.")
-
-                    if not rankings and not partials:
-                        st.warning("No campaigns met the matching threshold for your campaign profile.")
-
+                    # Provenance issues and alignment mismatches are shown in the full scoring
+                    # expander on the results page (a warning here would be cleared by the rerun).
                     st.session_state.rankings = rankings
                     st.session_state.partials = partials
                     st.session_state.all_scores_processed = all_scores_processed
@@ -1343,7 +1402,7 @@ as absent and the reasoning says so — worth correcting if it's wrong.
                     dvars = dd.get('variables', {}) if isinstance(dd, dict) else {}
                     for vk, vv in dvars.items():
                         verdict = vv.get('verdict') if isinstance(vv, dict) else vv
-                        if _norm(verdict) == 'diverges':
+                        if _diverges(verdict):
                             diverging.append(_pretty_var(vk))
                 if diverging:
                     plural = 'difference' if len(diverging) == 1 else 'differences'
@@ -1363,13 +1422,16 @@ as absent and the reasoning says so — worth correcting if it's wrong.
 
             if st.button("Deep dive →", key=f"{key_prefix}_{m['rank']}"):
                 run_deep_dive(m['campaign'], m.get('match_tier', ''), m.get('match_summary', ''),
-                              df, conf_df, conc_map, intake)
+                              df, conf_df, conc_map, intake, opp_map)
 
         if rankings:
             for m in rankings:
                 render_match_card(m, "dive")
-        else:
+        elif partials:
             st.info("No Strong or Moderate structural matches were found for your campaign profile.")
+        else:
+            st.info("No campaigns met the matching threshold for your campaign profile. "
+                    "'Show full scoring for all campaigns' below explains how each one scored.")
 
         # FIX #15 — partial parallels, clearly caveated
         if partials:
@@ -1384,8 +1446,19 @@ as absent and the reasoning says so — worth correcting if it's wrong.
             for m in partials:
                 render_match_card(m, "pdive", partial=True)
 
+        unscored = st.session_state.get('unscored', [])
+        if unscored:
+            st.info("We couldn't assess "
+                    + ("this precedent" if len(unscored) == 1 else f"these {len(unscored)} precedents")
+                    + " this time, so it is not included above: " + ", ".join(unscored)
+                    + ". Running the search again may include it.")
+
         # ── Full scoring expander (transparency: how campaigns were selected)
         with st.expander("Show full scoring for all campaigns"):
+            st.markdown("How every precedent in the database was assessed for your campaign: which "
+                        "passed the compatibility gates, how each was scored, and which fell below "
+                        "the threshold for the lists above.")
+            st.markdown("")
             gate_classifications = st.session_state.get('gate_classifications', [])
             if gate_classifications:
                 st.markdown("**Gate classification — all campaigns:**")
@@ -1400,7 +1473,7 @@ as absent and the reasoning says so — worth correcting if it's wrong.
             # Now shows per-variable chips and full reasoning so the cut can be audited.
             below = st.session_state.get('below_threshold', [])
             if below:
-                st.markdown("**Scored but excluded below threshold (not shown to users):**")
+                st.markdown("**Scored, but below the threshold for the lists above:**")
                 for c in below:
                     st.markdown(f"**{esc(c['campaign'])}** — weighted {c.get('weighted_score', 0):.2f} · "
                                 f"cut because {esc(c.get('exclusion_reason', 'below threshold'))}")
@@ -1434,6 +1507,17 @@ as absent and the reasoning says so — worth correcting if it's wrong.
                             f"{esc(d.get('reasoning',''))}<br>{variable_chips_html(d.get('variables', {}))}</div>",
                             unsafe_allow_html=True)
                     st.markdown("")
+
+            # Automatic checks on this result (previously raised as warnings that the rerun cleared)
+            checks = (st.session_state.get('check_notes', [])
+                      + [f"Institutional Environment: {p}" for p in st.session_state.get('provenance_issues', [])]
+                      + [f"Alignment recalculated: {m}" for m in st.session_state.get('alignment_mismatches', [])])
+            st.markdown("**Automatic checks on this result:**")
+            if checks:
+                for msg in checks:
+                    st.markdown(f"- {msg}")
+            else:
+                st.markdown("No issues found.")
 
         st.divider()
         if st.button("← Refine my inputs"):
@@ -1558,6 +1642,15 @@ and a well-evidenced one can be a distant one.
                 """, unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
 
+        suspicious = dd.get('suspicious_tactics') or []
+        if suspicious:
+            st.warning(f"**Tactic name check:** {len(suspicious)} tactic(s) below may be paraphrased "
+                       f"or made up, because their names don't closely match the precedent's recorded "
+                       f"Notable Tactics. Check these before using:\n\n"
+                       + "\n".join(f"- *{t}*" for t in suspicious))
+        for msg in dd.get('check_notes') or []:
+            st.warning(msg)
+
         tkw = s.get('takeaways', {}) or {}
         if tkw:
             st.markdown(f"""
@@ -1592,7 +1685,21 @@ and a well-evidenced one can be a distant one.
                 st.rerun()
 
 
-def run_deep_dive(campaign_name, match_tier, match_summary, df, conf_df, conc_map, intake):
+def run_deep_dive(campaign_name, match_tier, match_summary, df, conf_df, conc_map, intake, opp_map=None):
+    # Deep dives are kept in this visitor's session only (cleared by "Start a new search" or
+    # closing the tab), so reopening one is instant and free. Nothing is written to disk.
+    # The key includes the confirmed categories and campaign summary, so refined inputs
+    # produce a fresh deep dive.
+    user_cats = st.session_state.get('user_categories', {})
+    store_key = json.dumps([campaign_name, match_tier, user_cats, intake.get('campaign_summary', '')],
+                           sort_keys=True, ensure_ascii=False)
+    store = st.session_state.setdefault('deep_dive_store', {})
+    if store_key in store:
+        st.session_state.deep_dive = store[store_key]
+        st.session_state.stage = 'deep_dive'
+        st.rerun()
+
+    st.session_state['check_notes'] = []
     with st.spinner(f"Building deep dive for {campaign_name}..."):
         oracle_name = resolve_oracle_name(df, campaign_name)
         try:
@@ -1605,7 +1712,6 @@ def run_deep_dive(campaign_name, match_tier, match_summary, df, conf_df, conc_ma
         overall_conf_flag, overall_conf_explanation = get_overall_confidence(conf_df, oracle_name)
         raw_tactics = get_notable_tactics(df, campaign_name) or "Not available."
         time_window, outcome = get_time_window_and_outcome(df, campaign_name)
-        user_cats = st.session_state.get('user_categories', {})
 
         prompt = DEEP_DIVE_PROMPT.format(
             campaign_summary=intake.get('campaign_summary', ''),
@@ -1613,9 +1719,12 @@ def run_deep_dive(campaign_name, match_tier, match_summary, df, conf_df, conc_ma
             campaign_stage=intake.get('campaign_stage', ''),
             structural_profile=json.dumps(intake.get('profile', {}), indent=2),
             user_concentration=user_cats.get('concentration', 'Not stated'),
+            user_opposition=user_cats.get('opposition', 'Not stated'),
+            user_public_sentiment=user_cats.get('public_sentiment', 'Not stated'),
             match_summary=match_summary,
             precedent_list_a=list_a_data,
             precedent_concentration=conc_map.get(oracle_name, 'Not stated'),
+            precedent_opposition=(opp_map or {}).get(oracle_name, 'Not stated'),
             notable_tactics=raw_tactics,
             confidence_data=confidence_data)
 
@@ -1632,13 +1741,11 @@ def run_deep_dive(campaign_name, match_tier, match_summary, df, conf_df, conc_ma
 
             tactics_in_response = [{'name': item.get('tactic_name', '')}
                                    for item in result.get('sections', {}).get('takeaways', {}).get('items', [])]
-            suspicious = check_tactic_hallucinations(tactics_in_response, raw_tactics)
-            if suspicious:
-                st.warning(f"**Tactic name check:** {len(suspicious)} tactic(s) in the deep dive "
-                           f"may be paraphrased or hallucinated - their names don't closely match "
-                           f"Variable 15 in the database. Check these before using:\n\n"
-                           + "\n".join(f"- *{t}*" for t in suspicious))
+            # Shown on the deep dive page (a warning here would be cleared by the rerun below).
+            result['suspicious_tactics'] = check_tactic_hallucinations(tactics_in_response, raw_tactics)
+            result['check_notes'] = list(st.session_state.get('check_notes', []))
 
+            store[store_key] = result
             st.session_state.deep_dive = result
             st.session_state.stage = 'deep_dive'
             st.rerun()
